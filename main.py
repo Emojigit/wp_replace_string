@@ -68,7 +68,7 @@ else:
     print("Login failed")
     exit(3)
 
-def WorkOnPage(title):
+def WorkOnPage(title,bot):
     print("Working on {}".format(title))
     edit_token_data = PerformAPIGetActions(S,{
         'action':"query",
@@ -105,8 +105,8 @@ def WorkOnPage(title):
         "token": edit_token,
         "format": "json",
         "text": page_modifyed_data,
-        "summary":config["summary"],
-        "bot": True,
+        "summary":config["summary"] + (not bot and " (Manual)"),
+        "bot": bot,
         "headers":{'Content-Type': 'multipart/form-data'},
         "basetimestamp":TS,
         "starttimestamp":starttimestamp,
@@ -115,7 +115,7 @@ def WorkOnPage(title):
 
 if len(sys.argv) == 2:
     print("Working on spec page `{}`".format(sys.argv[1]))
-    WorkOnPage(sys.argv[1])
+    WorkOnPage(sys.argv[1],False)
 else:
     while True:
         print("not provide title, do in random pages")
@@ -128,7 +128,7 @@ else:
         })["query"]["random"][0]["title"]
         print("Working on {}".format(pageTitle))
         WorkOnPage(pageTitle)
-        time.sleep(config["delay"])
+        time.sleep(config["delay"],True)
 
     
 

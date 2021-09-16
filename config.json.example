@@ -1,0 +1,11 @@
+{
+   "replaces":{
+      "wmcug\\.org\\.cn": "removed\\.example\\.com",
+      "cug\\.org\\.cn": "\\.removed\\.example\\.com"
+   },
+   "api_php": "https://test.wikimedia.org/w/api.php",
+   "username": "Example@something",
+   "botpassword": "something",
+   "delay": 10,
+   "summary": "Replaced $AMOUT of words"
+}

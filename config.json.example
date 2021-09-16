@@ -7,5 +7,5 @@
    "username": "Example@something",
    "botpassword": "something",
    "delay": 10,
-   "summary": "Replaced $AMOUT of words"
+   "summary": "Replaced words"
 }

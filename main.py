@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import requests, sys, time, json
+import requests, sys, time, json, re
 S = requests.Session()
 try:
     with open('config.json', 'r') as f:
@@ -11,9 +11,13 @@ except FileNotFoundError:
 except json.decoder.JSONDecodeError:
     print("Syntax ERROR! Prasing traceback below.")
     raise
-if ("replaces" not in config) or len(config) == 0:
+if (len(config) == 0) or (("replaces" not in config) and ("replaces_regex" not in config)):
     print("No replacing rules!")
     exit(2)
+elif "replaces" not in config:
+    config["replaces"] = {}
+elif "replaces_regex" not in config:
+    config["replaces_regex"] = {}
 elif "api_php" not in config:
     print("`api_php` key not found!")
     exit(2)
@@ -35,12 +39,14 @@ elif "delay" not in config:
 
 def PerformAPIGetActions(Session, args):
     args["format"] = "json"
+    args["utf8"] = "json"
     R = Session.get(url=config["api_php"], params=args)
     print(R.text)
     return R.json()
 
 def PerformAPIPostActions(Session, args):
     args["format"] = "json"
+    args["utf8"] = "json"
     R = Session.post(url=config["api_php"], data=args)
     print(R.text)
     return R.json()
@@ -98,7 +104,12 @@ def WorkOnPage(title,bot):
     for x,y in config["replaces"].items():
         print("Working on '{}' to '{}'".format(x,y))
         page_modifyed_data = page_modifyed_data.replace(x,y)
+    for x,y in config["replaces_regex"].items():
+        print("Working on regex '{}' to '{}'".format(x,y))
+        page_modifyed_data = re.sub(x,y,page_modifyed_data)
     
+    print("Change Preview:")
+    print(page_modifyed_data)
     PerformAPIPostActions(S,{
         "action": "edit",
         "title": title,
@@ -118,6 +129,9 @@ if len(sys.argv) == 2:
     WorkOnPage(sys.argv[1],False)
 else:
     while True:
+        if "noauto" in config:
+            print("Fuse enabled")
+            exit(4)
         print("not provide title, do in random pages")
         pageTitle = PerformAPIGetActions(S,{
             "action":"query",

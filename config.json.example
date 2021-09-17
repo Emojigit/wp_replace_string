@@ -3,6 +3,10 @@
       "wmcug\\.org\\.cn": "removed\\.example\\.com",
       "cug\\.org\\.cn": "\\.removed\\.example\\.com"
    },
+   "replaces_regex":{
+      "\\[https?(:\\\/\\\/)+[a-zA-z0-9_.]*wmcug\\.org\\.cn (.*)\\]": "\\2",
+      "[a-zA-z0-9_.]*wmcug\\.org\\.cn": "removed.wmcug.oa2021.example",
+   },
    "api_php": "https://test.wikimedia.org/w/api.php",
    "username": "Example@something",
    "botpassword": "something",

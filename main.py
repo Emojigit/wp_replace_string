@@ -33,9 +33,22 @@ elif "botpassword" not in config:
 elif "summary" not in config:
     print("`summary` key not found!")
     exit(2)
-elif "delay" not in config:
+if "delay" not in config:
     print("`delay` key not found, fallback to default (10).")
     config["delay"] = 10
+if "find_method" not in config:
+    print("`find_method` key not found, fallback to default (random).")
+    config["find_method"] = "random"
+elif config["find_method"] != "random" and config["find_method"] != "exturlusage":
+    print("Find method unknown!")
+    exit(2)
+elif config["find_method"] == "exturlusage" and ("m_exturlusage_defs" not in config):
+    print("`m_exturlusage_defs` key not found while the method is `exturlusage`!")
+    exit(2)
+if "skipped_ns" not in config:
+    print("`skipped_ns` key not found, fallback to default (None).")
+    config["skipped_ns"] = []
+
 
 def PerformAPIGetActions(Session, args):
     args["format"] = "json"
@@ -116,7 +129,7 @@ def WorkOnPage(title,bot):
         "token": edit_token,
         "format": "json",
         "text": page_modifyed_data,
-        "summary":config["summary"] + (not bot and " (Manual)"),
+        "summary":config["summary"] + (" (Manual)" if not bot else ""),
         "bot": bot,
         "headers":{'Content-Type': 'multipart/form-data'},
         "basetimestamp":TS,
@@ -132,17 +145,35 @@ else:
         if "noauto" in config:
             print("Fuse enabled")
             exit(4)
-        print("not provide title, do in random pages")
-        pageTitle = PerformAPIGetActions(S,{
-            "action":"query",
-            "list":"random",
-            "rnlimit":1,
-            "utf8":"",
-            "format":"json",
-        })["query"]["random"][0]["title"]
-        print("Working on {}".format(pageTitle))
-        WorkOnPage(pageTitle)
-        time.sleep(config["delay"],True)
+        print("not provide title, enter automatic mode")
+        if config["find_method"] == "random":
+            pageTitle = PerformAPIGetActions(S,{
+                "action":"query",
+                "list":"random",
+                "rnlimit":1,
+                "utf8":"",
+                "format":"json",
+            })["query"]["random"][0]["title"]
+            print("Working on {}".format(pageTitle))
+            WorkOnPage(pageTitle,True)
+            time.sleep(config["delay"])
+        elif config["find_method"] == "exturlusage":
+            pageTitles = PerformAPIGetActions(S,{
+                "action":"query",
+                "list":"exturlusage",
+                "euquery":config["m_exturlusage_defs"]["euquery"],
+                "eulimit":config["m_exturlusage_defs"]["eulimit"],
+                "euprotocol":config["m_exturlusage_defs"]["euprotocol"],
+                "utf8":"",
+                "format":"json",
+            })["query"]["exturlusage"]
+            for x in pageTitles:
+                print("Working on {}".format(x["title"]))
+                if x["ns"] in config["skipped_ns"]:
+                    print("Matched NS {}, not process!".format(str(x["ns"])))
+                else:
+                    WorkOnPage(x["title"],True)
+                    time.sleep(config["delay"])
 
     
 

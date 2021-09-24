@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import requests, sys, time, json, re
+import requests, sys, time, json, re, subprocess
 S = requests.Session()
 try:
     with open('config.json', 'r') as f:
@@ -52,14 +52,14 @@ if "skipped_ns" not in config:
 
 def PerformAPIGetActions(Session, args):
     args["format"] = "json"
-    args["utf8"] = "json"
+    args["utf8"] = True
     R = Session.get(url=config["api_php"], params=args)
     print(R.text)
     return R.json()
 
 def PerformAPIPostActions(Session, args):
     args["format"] = "json"
-    args["utf8"] = "json"
+    args["utf8"] = True
     R = Session.post(url=config["api_php"], data=args)
     print(R.text)
     return R.json()
@@ -98,43 +98,80 @@ def WorkOnPage(title,bot):
     })
     edit_token = edit_token_data['query']['tokens']['csrftoken']
     starttimestamp = edit_token_data["curtimestamp"]
-    page_data = PerformAPIGetActions(S,{
-        "action":"query",
-        "prop":"revisions",
-        "titles":title,
-        "rvslots":"*",
-        "rvprop":"content|timestamp",
-        "formatversion":"2",
-        'format':"json"
-    })
-    try:
-        TS = page_data["query"]["pages"][0]["revisions"][0]["timestamp"]
-    except KeyError:
-        print("Page not exist or timestamp invalid in {}".format(title))
+    if title.find(":") and title.split(":",1) == "Topic": # Flow
+        print("flow discussion functtion not complete")
         return
-    page_content = page_data["query"]["pages"][0]["revisions"][0]["slots"]["main"]["content"]
-    page_modifyed_data = page_content
-    for x,y in config["replaces"].items():
-        print("Working on '{}' to '{}'".format(x,y))
-        page_modifyed_data = page_modifyed_data.replace(x,y)
-    for x,y in config["replaces_regex"].items():
-        print("Working on regex '{}' to '{}'".format(x,y))
-        page_modifyed_data = re.sub(x,y,page_modifyed_data)
-    
-    print("Change Preview:")
-    print(page_modifyed_data)
-    PerformAPIPostActions(S,{
-        "action": "edit",
-        "title": title,
-        "token": edit_token,
-        "format": "json",
-        "text": page_modifyed_data,
-        "summary":config["summary"] + (" (Manual)" if not bot else ""),
-        "bot": bot,
-        "headers":{'Content-Type': 'multipart/form-data'},
-        "basetimestamp":TS,
-        "starttimestamp":starttimestamp,
-    })
+    else: # Plain Text (e.g. Wikitext, Lua)
+        flow_header_data = PerformAPIGetActions(S,{
+            "action": "flow",
+            "format": "json",
+            "submodule": "view-header",
+            "page": title,
+            "vhformat": "wikitext"
+        })
+        is_flow = False
+        try: # In case the "plain text" is the talk page itself instead of topic
+            is_flow = True if flow_header_data["flow"] else False
+        except KeyError:
+            pass
+        page_data = PerformAPIGetActions(S,{
+            "action":"query",
+            "prop":"revisions",
+            "titles":title,
+            "rvslots":"*",
+            "rvprop":"content|timestamp",
+            "formatversion":"2",
+            "format":"json"
+        })    
+        try:
+            TS = page_data["query"]["pages"][0]["revisions"][0]["timestamp"]
+        except KeyError:
+            print("Page not exist or timestamp invalid in {}".format(title))
+            return
+        if is_flow:
+            try:
+                page_content = ehprev_revision = flow_header_data["flow"]["view-header"]["result"]["header"]["revision"]["content"]["content"]
+                ehprev_revision = flow_header_data["flow"]["view-header"]["result"]["header"]["revision"]["revisionId"]
+            except KeyError:
+                print("No header or created wrong page!")
+                return
+        else:
+            page_content = page_data["query"]["pages"][0]["revisions"][0]["slots"]["main"]["content"]
+        print(page_content)
+        page_modiflyed_data = page_content
+        for x,y in config["replaces"].items():
+            print("Working on '{}' to '{}'".format(x,y))
+            page_modiflyed_data = page_modiflyed_data.replace(x,y)
+        for x,y in config["replaces_regex"].items():
+            print("Working on regex '{}' to '{}'".format(x,y))
+            page_modiflyed_data = re.sub(x,y,page_modiflyed_data)
+        
+        if page_content == page_modiflyed_data:
+            print("No diff, skip perform edit!")
+            return
+        if not is_flow:
+            PerformAPIPostActions(S,{
+                "action": "edit",
+                "title": title,
+                "token": edit_token,
+                "format": "json",
+                "text": page_modiflyed_data,
+                "summary":config["summary"] + (" (Manual)" if not bot else ""),
+                "bot": bot,
+                "headers":{'Content-Type': 'multipart/form-data'},
+                "basetimestamp":TS,
+                "starttimestamp":starttimestamp,
+            })
+        else:
+            PerformAPIPostActions(S,{
+                "action": "flow",
+                "submodule": "edit-header",
+                "page": title,
+                "token": edit_token,
+                "ehprev_revision": ehprev_revision,
+                "ehcontent": page_modiflyed_data,
+                "headers":{'Content-Type': 'multipart/form-data'}
+            })
     
 
 if len(sys.argv) == 2:
@@ -174,6 +211,7 @@ else:
                 else:
                     WorkOnPage(x["title"],True)
                     time.sleep(config["delay"])
+            time.sleep(10)
 
     
 

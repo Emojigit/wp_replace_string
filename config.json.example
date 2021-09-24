@@ -4,12 +4,19 @@
       "cug\\.org\\.cn": "\\.removed\\.example\\.com"
    },
    "replaces_regex":{
-      "\\[https?(:\\\/\\\/)+[a-zA-z0-9_.]*wmcug\\.org\\.cn (.*)\\]": "\\2",
-      "[a-zA-z0-9_.]*wmcug\\.org\\.cn": "removed.wmcug.oa2021.example",
+      "\\[https?(:\\\/\\\/)+[a-zA-z0-9_.]*?wmcug\\.org\\.cn (.*?)\\]": "\\2",
+      "[a-zA-z0-9_.]*?wmcug\\.org\\.cn": "removed.wmcug.oa2021.example"
    },
    "api_php": "https://test.wikimedia.org/w/api.php",
    "username": "Example@something",
    "botpassword": "something",
    "delay": 10,
-   "summary": "Replaced words"
+   "summary": "Replaced words",
+   "find_method": "exturlusage",
+   "m_exturlusage_defs": {
+      "euprotocol": "https",
+      "eulimit": 500,
+      "euquery": "*.wmcug.org.cn"
+   }
 }
+
